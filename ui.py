@@ -216,7 +216,7 @@ def guide_keyboard():
 
     kb.button(
         text="Open Guide",
-        url="https://t.me/Vthbotguide/6",icon_custom_emoji_id="5355012477883004708"
+        url="https://t.me/botguides/8",icon_custom_emoji_id="5355012477883004708"
     )
     kb.button(
         text="Home",
