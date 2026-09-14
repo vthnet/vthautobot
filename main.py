@@ -6,6 +6,7 @@ from config import BOT_TOKEN
 from database import (
     client,
     get_settings,
+    ensure_order_indexes,
 )
 from handlers import routers
 from panel import services
@@ -24,6 +25,10 @@ async def startup():
     # Load/Create Settings
     settings = await get_settings()
     print("✅ Settings Loaded")
+
+    # Prevent duplicate orders for the same logical channel post/album.
+    await ensure_order_indexes()
+    print("✅ Order deduplication index ready")
 
     # Telegram
     me = await bot.get_me()

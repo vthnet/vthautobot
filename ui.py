@@ -6,30 +6,36 @@ def home_keyboard():
     kb = InlineKeyboardBuilder()
 
     kb.button(
-        text="📢 My Channels",
-        callback_data="channels"
+        text="My Channels",
+        callback_data="channels",
+        style="success",icon_custom_emoji_id="4992560350982309130"
     )
     kb.button(
-        text="💳 Wallet",
-        callback_data="wallet"
+        text="Wallet",
+        callback_data="wallet",
+        style="primary", icon_custom_emoji_id="5256186332669035163"
     )
     kb.button(
-        text="👥 Refer & Earn",
-        callback_data="refer"
+        text="Refer & Earn",
+        callback_data="refer",
+        style="primary", icon_custom_emoji_id="5226431245918942763"
     )
     kb.button(
-        text="📊 Statistics",
-        callback_data="stats"
+        text="Statistics",
+        callback_data="stats",
+        style="primary", icon_custom_emoji_id="5190806721286657692"
     )
     kb.button(
-        text="📖 How To Use",
-        callback_data="guide"
+        text="How To Use",
+        callback_data="guide",
+        style="success", icon_custom_emoji_id="5377537549831005036"
     )
     kb.button(
-        text="🛟 Support",
-        callback_data="support"
+        text="Support",
+        callback_data="support",
+        style="success", icon_custom_emoji_id="5238025132177369293"
     )
-    kb.adjust(2, 2, 2)
+    kb.adjust(1, 2, 1, 2)
     return kb.as_markup()
 
 
@@ -39,13 +45,13 @@ def force_join_keyboard():
     channel = FORCE_JOIN_CHANNEL.replace("@", "")
 
     kb.button(
-        text="📢 Join Channel",
-        url=f"https://t.me/{channel}"
+        text="Join Channel",
+        url=f"https://t.me/{channel}",icon_custom_emoji_id="4992560350982309130", style="primary"
     )
 
     kb.button(
-        text="✅ I've Joined",
-        callback_data="verify_join"
+        text="I've Joined",
+        callback_data="verify_join",icon_custom_emoji_id="5980930633298350051", style="success"
     )
 
     kb.adjust(1)
@@ -57,13 +63,13 @@ def wallet_keyboard():
     kb = InlineKeyboardBuilder()
 
     kb.button(
-        text="💰 Buy Credits",
-        callback_data="buy"
+        text="Buy Credits",
+        callback_data="buy",icon_custom_emoji_id="5382164415019768638"
     )
 
     kb.button(
-        text="🔙 Back",
-        callback_data="home"
+        text="Back",
+        callback_data="home",icon_custom_emoji_id="5409284148491726576", style="danger"
     )
 
     kb.adjust(1, 1)
@@ -74,15 +80,15 @@ def wallet_keyboard():
 def buy_keyboard():
     kb = InlineKeyboardBuilder()
 
-    kb.button(text="₹100", callback_data="buy_100")
-    kb.button(text="₹250", callback_data="buy_250")
+    kb.button(text="₹100", callback_data="buy_100",style="primary")
+    kb.button(text="₹250", callback_data="buy_250",style="primary")
 
-    kb.button(text="₹500", callback_data="buy_500")
-    kb.button(text="₹1000", callback_data="buy_1000")
+    kb.button(text="₹500", callback_data="buy_500",style="primary")
+    kb.button(text="₹1000", callback_data="buy_1000",style="primary")
 
     kb.button(
-        text="🔙 Back",
-        callback_data="wallet"
+        text="Back",
+        callback_data="wallet",icon_custom_emoji_id="5409284148491726576",style="danger"
     )
 
     kb.adjust(2, 2, 1)
@@ -94,8 +100,8 @@ def cancel_keyboard():
     kb = InlineKeyboardBuilder()
 
     kb.button(
-        text="❌ Cancel",
-        callback_data="home"
+        text="Cancel",
+        callback_data="home",icon_custom_emoji_id="5974083768233760323"
     )
 
     return kb.as_markup()
@@ -110,7 +116,7 @@ def admin_keyboard():
     )
     kb.button(
         text="💳 Payments",
-        callback_data="admin_payments"
+        callback_data="admin_payments",
     )
     kb.button(
         text="👥 Users",
@@ -147,16 +153,16 @@ def channels_keyboard(channels):
                 or str(channel["_id"])
             )
             kb.button(
-                text=f"📢 {title}",
-                callback_data=f"channel_{channel['_id']}"
+                text=f" {title}",
+                callback_data=f"channel_{channel['_id']}",icon_custom_emoji_id="4992560350982309130"
             )
     kb.button(
-        text="➕ Add Channel",
-        callback_data="add_channel"
+        text="Add Channel",
+        callback_data="add_channel",icon_custom_emoji_id="5287354223141342798"
     )
     kb.button(
-        text="🔙 Back",
-        callback_data="home"
+        text="Back",
+        callback_data="home",icon_custom_emoji_id="5409284148491726576",style="danger"
     )
     kb.adjust(1)
     return kb.as_markup()
@@ -172,23 +178,23 @@ def channel_keyboard(chat_id: int):
     )
 
     kb.button(
-        text="👀 Auto Views",
-        callback_data=f"views_{chat_id}"
+        text="Auto Views",
+        callback_data=f"views_{chat_id}",icon_custom_emoji_id="5039623284056917259"
     )
 
     kb.button(
-        text="❤️ Auto Reactions",
-        callback_data=f"reactions_{chat_id}"
+        text="Auto Reactions",
+        callback_data=f"reactions_{chat_id}",icon_custom_emoji_id="5902223360439357399"
     )
 
     kb.button(
-        text="🗑 Delete Channel",
-        callback_data=f"delete_{chat_id}"
+        text="Delete Channel",
+        callback_data=f"delete_{chat_id}",icon_custom_emoji_id="5408832111773757273"
     )
 
     kb.button(
-        text="🔙 Back",
-        callback_data="channels"
+        text="Back",
+        callback_data="channels",icon_custom_emoji_id="5409284148491726576",style="danger"
     )
 
     kb.adjust(1, 2, 1, 1)
@@ -199,8 +205,8 @@ def channel_keyboard(chat_id: int):
 def referral_keyboard():
     kb = InlineKeyboardBuilder()
     kb.button(
-        text="🔙 Back",
-        callback_data="home"
+        text="Back",
+        callback_data="home",icon_custom_emoji_id="5409284148491726576",style="danger"
     )
     return kb.as_markup()
 
@@ -209,12 +215,12 @@ def guide_keyboard():
     kb = InlineKeyboardBuilder()
 
     kb.button(
-        text="📺 Open Guide",
-        url="https://t.me/Vthbotguide/6"
+        text="Open Guide",
+        url="https://t.me/Vthbotguide/6",icon_custom_emoji_id="5355012477883004708"
     )
     kb.button(
-        text="🏠 Home",
-        callback_data="home"
+        text="Home",
+        callback_data="home",icon_custom_emoji_id="5395831812704452001"
     )
     kb.adjust(1)
     return kb.as_markup()
@@ -223,12 +229,12 @@ def guide_keyboard():
 def support_keyboard():
     kb = InlineKeyboardBuilder()
     kb.button(
-        text="👤 Contact Support",
-        url="https://t.me/vthnetsupport"
+        text=" Contact Support",
+        url="https://t.me/vthnetsupport",icon_custom_emoji_id="5983494174723279869"
     )
     kb.button(
-        text="🏠 Home",
-        callback_data="home"
+        text="Home",
+        callback_data="home",icon_custom_emoji_id="5395831812704452001"
     )
     kb.adjust(1)
     return kb.as_markup()
@@ -316,12 +322,12 @@ def settings_keyboard():
 def payment_confirm_keyboard():
     kb = InlineKeyboardBuilder()
     kb.button(
-        text="✅ I've Paid",
-        callback_data="payment_done"
+        text="I've Paid",
+        callback_data="payment_done",icon_custom_emoji_id="5980930633298350051",style="success"
     )
     kb.button(
-        text="❌ Cancel",
-        callback_data="wallet"
+        text="Cancel",
+        callback_data="wallet",icon_custom_emoji_id="5974083768233760323",style="danger"
     )
     kb.adjust(2)
     return kb.as_markup()
@@ -329,8 +335,8 @@ def payment_confirm_keyboard():
 def home_only_keyboard():
     kb = InlineKeyboardBuilder()
     kb.button(
-        text="🏠 Home",
-        callback_data="home"
+        text="Home",
+        callback_data="home",icon_custom_emoji_id="5395831812704452001"
     )
 
     return kb.as_markup()
@@ -339,13 +345,13 @@ def back_home_keyboard(chat_id):
     kb = InlineKeyboardBuilder()
 
     kb.button(
-        text="⬅ Back",
-        callback_data=f"channel_{chat_id}",
+        text="Back",
+        callback_data=f"channel_{chat_id}",icon_custom_emoji_id="5409284148491726576",style="danger"
     )
 
     kb.button(
-        text="🏠 Home",
-        callback_data="home",
+        text="Home",
+        callback_data="home",icon_custom_emoji_id="5395831812704452001"
     )
 
     kb.adjust(2)
@@ -357,8 +363,8 @@ def back_keyboard():
     kb = InlineKeyboardBuilder()
 
     kb.button(
-        text="🔙 Back",
-        callback_data="home"
+        text="Back",
+        callback_data="home",icon_custom_emoji_id="5409284148491726576",style="danger"
     )
 
     return kb.as_markup()

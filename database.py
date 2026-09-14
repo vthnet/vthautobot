@@ -1,7 +1,9 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from config import MONGO_URI
 from datetime import datetime
+import math
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 
 client = AsyncIOMotorClient(MONGO_URI)
 
@@ -117,8 +119,48 @@ async def update_payment(payment_id: str, data: dict):
         {"$set": data}
     )
 
+async def ensure_order_indexes():
+    """
+    Create a sparse unique index for logical channel-post deduplication.
+    Existing orders without post_key are unaffected.
+    """
+    await orders.create_index(
+        [("post_key", 1)],
+        unique=True,
+        sparse=True,
+        name="unique_post_key",
+    )
+
+
+def calculate_order_credits(views: int, reactions: int, settings: dict) -> tuple[int, int, int]:
+    """
+    Return (view_credits, reaction_credits, total_credits) using the
+    exact same ceil-based conversion used by the worker.
+    """
+    views_per_credit = max(1, int(settings.get("views_per_credit", 50)))
+    reactions_per_credit = max(1, int(settings.get("reactions_per_credit", 5)))
+
+    view_credits = (
+        math.ceil(int(views or 0) / views_per_credit)
+        if views
+        else 0
+    )
+    reaction_credits = (
+        math.ceil(int(reactions or 0) / reactions_per_credit)
+        if reactions
+        else 0
+    )
+
+    return view_credits, reaction_credits, view_credits + reaction_credits
+
+
 async def create_order(data: dict):
-    await orders.insert_one(data)
+    try:
+        await orders.insert_one(data)
+        return True
+    except DuplicateKeyError:
+        # A channel post with the same logical post_key was already queued.
+        return False
 
 
 settings = db.settings

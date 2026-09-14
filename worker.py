@@ -1,5 +1,6 @@
 import asyncio
 import math
+from html import escape
 from database import (
     orders,
     get_balance,
@@ -8,6 +9,7 @@ from database import (
     get_channel,
     update_channel,
     get_settings,
+    calculate_order_credits,
 )
 
 from panel import add_order
@@ -69,17 +71,11 @@ Please add the channel again.
           await asyncio.sleep(1)
           continue
 
-        views_per_credit = settings["views_per_credit"]
-        reactions_per_credit = settings["reactions_per_credit"]
-
-        view_cost = math.ceil(
-            order.get("views", 0) / views_per_credit
-        ) if order.get("views", 0) else 0
-
-        reaction_cost = math.ceil(
-            order.get("reactions", 0) / reactions_per_credit
-        ) if order.get("reactions", 0) else 0
-        required = view_cost + reaction_cost
+        view_cost, reaction_cost, required = calculate_order_credits(
+            order.get("views", 0),
+            order.get("reactions", 0),
+            settings,
+        )
         balance = await get_balance(order["owner"])
 
         if balance < required:
@@ -100,8 +96,7 @@ Please add the channel again.
                    f"""
 ⏸ <b>Auto Boost Paused</b>
 
-📢 <b>Channel</b>
-{channel['title'] if channel else "Unknown"}
+📢 <b>{escape(channel.get('title') or 'Unknown Channel')}</b>
 
 ❌ Insufficient credits.
 
@@ -127,7 +122,7 @@ Please add the channel again.
         f"""
 👤 <code>{order['owner']}</code>
 
-📢 {channel['title'] if channel else 'Unknown'}
+📢 {escape(channel.get('title') or 'Unknown Channel')}
 
 Reason:
 Insufficient Credits
@@ -174,7 +169,7 @@ Please make it public and try again.
                f"""
             👤 <code>{order['owner']}</code>
 
-            📢 {channel['title']}
+            📢 {escape(channel.get('title') or 'Unknown Channel')}
 
             Reason:
             Private channel.
@@ -290,7 +285,7 @@ Please make it public and try again.
                   f"""
 🚀 <b>Auto Boost Started</b>
 <blockquote>--------------------------------------------------
-📢 <b>Channel</b> :<b>{channel['title']}</b>
+📢 <b>Channel</b> :<b>{escape(channel.get('title') or 'Unknown Channel')}</b>
 👀 <b>Views</b> :<b>{order['views']}</b>
 ❤️ <b>Reactions</b> :<b>{order['reactions']}</b>
 💸 <b>Credits Used</b> :<b>{required}</b>
@@ -313,7 +308,7 @@ Please make it public and try again.
                f"""
 <blockquote>👤 <b>User</b> :<code>{order['owner']}</code>
 
-📢 <b>Channel</b> :{channel['title']}
+📢 {escape(channel.get('title') or 'Unknown Channel')}
 
 🔗 <b>Post</b> :{post_link}
 
@@ -353,7 +348,7 @@ Please make it public and try again.
             f"""
 ❌ <b>Auto Boost Failed</b>
 --------------------------------------------------
-📢 <b>Channel</b> :{channel['title']}
+📢 <b>Channel</b> :{escape(channel.get('title') or 'Unknown Channel')}
 
 🔗 <b>Post</b> :{post_link}
 --------------------------------------------------
@@ -372,7 +367,7 @@ Please try again later.
         "Auto Boost Failed",
         f"""
 👤 <code>{order['owner']}</code>
-📢 {channel['title']}
+📢 {escape(channel.get('title') or 'Unknown Channel')}
 🔗 {post_link}
 Reason: Panel rejected order.
 """,

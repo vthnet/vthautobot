@@ -3,6 +3,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
+from html import escape
 from utils import edit_or_send
 import ui
 
@@ -15,6 +16,9 @@ from database import (
     update_channel,
     update_user,
     create_order,
+    get_settings,
+    get_balance,
+    calculate_order_credits,
 )
 
 router = Router()
@@ -27,6 +31,27 @@ class AddChannel(StatesGroup):
 class ChannelSettings(StatesGroup):
     waiting_views = State()
     waiting_reactions = State()
+
+
+def _rate_preview(views: int, reactions: int, settings: dict, balance: int) -> str:
+    view_credits, reaction_credits, total_credits = calculate_order_credits(
+        views, reactions, settings
+    )
+
+    credits_per_rupee = max(1, int(settings.get("credits_per_rupee", 50)))
+    rupee_equivalent = total_credits / credits_per_rupee
+    remaining = max(0, int(balance) - total_credits)
+
+    return f"""
+💳 <b>Credit Usage Preview</b>
+• 👀 {int(views):,} views → <b>{view_credits:,} credits</b>
+• ❤️ {int(reactions):,} reactions → <b>{reaction_credits:,} credits</b>
+
+📊 <b>Total per post</b> → <b>{total_credits:,} credits</b>
+💵 Approx. value → <b>₹{rupee_equivalent:.2f}</b>
+💰 Current balance → <b>{int(balance):,} credits</b>
+📉 Balance after one post → <b>{remaining:,} credits</b>
+"""
 
 
 # ======================================================
@@ -238,6 +263,10 @@ async def save_views(message: Message, state: FSMContext):
         )
 
     data = await state.get_data()
+    settings = await get_settings()
+    channel = await get_channel(data["chat_id"])
+    current_reactions = int(channel.get("reactions", 0)) if channel else 0
+    balance = await get_balance(message.from_user.id)
 
     await update_channel(
         data["chat_id"],
@@ -252,19 +281,25 @@ async def save_views(message: Message, state: FSMContext):
         pass
 
     bot_message = data["bot_message"]
+    preview = _rate_preview(amount, current_reactions, settings, balance)
+
+    text = f"""
+✅ <b>Auto Views Updated</b>
+--------------------------------------------------
+👀 Views : <b>{amount:,}</b>
+❤️ Reactions : <b>{current_reactions:,}</b>
+--------------------------------------------------
+{preview}
+--------------------------------------------------
+Every new post will use this conversion automatically.
+No credits are deducted now.
+"""
 
     try:
-
         await message.bot.edit_message_caption(
             chat_id=message.chat.id,
             message_id=bot_message,
-            caption=f"""
-✅ <b>Auto Views Updated</b>
---------------------------------------------------
-👀 Views :<b>{amount}</b>
---------------------------------------------------
-Every new post will receive this amount automatically.
-""",
+            caption=text,
             parse_mode="HTML",
             reply_markup=ui.back_home_keyboard(
                 data["chat_id"]
@@ -272,22 +307,16 @@ Every new post will receive this amount automatically.
         )
 
     except Exception:
-
         await message.bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=bot_message,
-            text=f"""
-✅ <b>Auto Views Updated</b>
---------------------------------------------------
-👀 Views :<b>{amount}</b>
---------------------------------------------------
-Every new post will receive this amount automatically.
-""",
+            text=text,
             parse_mode="HTML",
             reply_markup=ui.back_home_keyboard(
                 data["chat_id"]
             ),
         )
+
     await state.clear()
 
 # ======================================================
@@ -339,6 +368,10 @@ async def save_reactions(message: Message, state: FSMContext):
         )
 
     data = await state.get_data()
+    settings = await get_settings()
+    channel = await get_channel(data["chat_id"])
+    current_views = int(channel.get("views", 0)) if channel else 0
+    balance = await get_balance(message.from_user.id)
 
     await update_channel(
         data["chat_id"],
@@ -353,20 +386,25 @@ async def save_reactions(message: Message, state: FSMContext):
         pass
 
     bot_message = data["bot_message"]
+    preview = _rate_preview(current_views, amount, settings, balance)
+
+    text = f"""
+✅ <b>Auto Reactions Updated</b>
+--------------------------------------------------
+👀 Views : <b>{current_views:,}</b>
+❤️ Reactions : <b>{amount:,}</b>
+--------------------------------------------------
+{preview}
+--------------------------------------------------
+Every new post will use this conversion automatically.
+No credits are deducted now.
+"""
 
     try:
-
         await message.bot.edit_message_caption(
             chat_id=message.chat.id,
             message_id=bot_message,
-            caption=f"""
-✅ <b>Auto Reactions Updated</b>
---------------------------------------------------
-❤️ Reactions :<b>{amount}</b>
---------------------------------------------------
-
-Every new post will receive this amount automatically.
-""",
+            caption=text,
             parse_mode="HTML",
             reply_markup=ui.back_home_keyboard(
                 data["chat_id"]
@@ -374,17 +412,10 @@ Every new post will receive this amount automatically.
         )
 
     except Exception:
-
         await message.bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=bot_message,
-            text=f"""
-✅ <b>Auto Reactions Updated</b>
---------------------------------------------------
-❤️ Reactions :<b>{amount}</b>
---------------------------------------------------
-Every new post will receive this amount automatically.
-""",
+            text=text,
             parse_mode="HTML",
             reply_markup=ui.back_home_keyboard(
                 data["chat_id"]
@@ -412,18 +443,28 @@ async def channel(call: CallbackQuery):
         )
 
     status = "🟢 ON" if channel.get("auto") else "🔴 OFF"
+    settings = await get_settings()
+    balance = await get_balance(call.from_user.id)
+    preview = _rate_preview(
+        int(channel.get("views", 0)),
+        int(channel.get("reactions", 0)),
+        settings,
+        balance,
+    )
 
     await edit_or_send(
     call,
         f"""
-📢 <b>{channel['title']}</b>
+📢 <b>{escape(channel.get('title') or 'Unknown Channel')}</b>
 <blockquote>-------------------------------------------------------
 🤖 <b>Auto Mode</b> :{status}
 
-👀 <b>Auto Views</b> :{channel.get("views", 0)}
-❤️ <b>Auto Reactions</b> :{channel.get("reactions", 0)}
+👀 <b>Auto Views</b> :{channel.get("views", 0):,}
+❤️ <b>Auto Reactions</b> :{channel.get("reactions", 0):,}
 
-📨 <b>Posts Boosted</b> :{channel.get("posts_boosted", 0)}
+{preview}
+
+📨 <b>Posts Boosted</b> :{channel.get("posts_boosted", 0):,}
 👀 <b>Total Views Sent</b> :{channel.get("views_sent", 0):,}
 ❤️ <b>Total Reactions Sent</b> :{channel.get("reactions_sent", 0):,}
 
@@ -503,7 +544,7 @@ async def remove(call: CallbackQuery):
             f"""
 🗑 <b>Channel Removed</b>
 --------------------------------------------------
-📢 {channel_data['title'] if channel_data else chat_id}
+📢 {escape(channel_data.get('title') if channel_data else str(chat_id))}
 --------------------------------------------------
 The channel has been removed successfully.
 """,
@@ -537,21 +578,55 @@ async def new_post(post: Message):
     if not channel.get("auto"):
         return
 
-    if post.message_id <= channel.get("last_post", 0):
-        return
-
-    await update_channel(
-        post.chat.id,
-        {
-            "last_post": post.message_id
-        }
+    # Ignore Telegram service/system messages. These are not real channel posts
+    # and must never advance last_post or create an order.
+    service_fields = (
+        "pinned_message",
+        "new_chat_members",
+        "left_chat_member",
+        "new_chat_title",
+        "new_chat_photo",
+        "delete_chat_photo",
+        "group_chat_created",
+        "supergroup_chat_created",
+        "channel_chat_created",
+        "migrate_to_chat_id",
+        "migrate_from_chat_id",
+        "video_chat_started",
+        "video_chat_ended",
+        "video_chat_participants_invited",
+        "forum_topic_created",
+        "forum_topic_closed",
+        "forum_topic_reopened",
+        "general_forum_topic_hidden",
+        "general_forum_topic_unhidden",
     )
 
-    views = channel.get("views", 0)
-    reactions = channel.get("reactions", 0)
+    if any(getattr(post, field, None) for field in service_fields):
+        return
 
-    # Nothing to boost
+    # Telegram sends every item of an album as a separate channel_post update.
+    # media_group_id makes all those messages share one logical post_key.
+    media_group_id = getattr(post, "media_group_id", None)
+    if media_group_id:
+        post_key = f"{post.chat.id}:album:{media_group_id}"
+    else:
+        post_key = f"{post.chat.id}:message:{post.message_id}"
+
+    if post.message_id <= channel.get("last_post", 0) and not media_group_id:
+        return
+
+    views = int(channel.get("views", 0))
+    reactions = int(channel.get("reactions", 0))
+
+    # Nothing to boost. Do not create a useless order.
     if views == 0 and reactions == 0:
+        # Still advance last_post for real posts so an old post is not
+        # repeatedly considered after auto mode is changed later.
+        await update_channel(
+            post.chat.id,
+            {"last_post": max(post.message_id, channel.get("last_post", 0))}
+        )
         return
 
     post_link = (
@@ -560,36 +635,44 @@ async def new_post(post: Message):
         else "Private Channel"
     )
 
-    # Create pending order
-    await create_order(
+    # MongoDB unique sparse index on post_key makes this atomic:
+    # duplicate album items / duplicate updates can never create another order.
+    created = await create_order(
         {
+            "post_key": post_key,
+            "media_group_id": media_group_id,
             "chat_id": post.chat.id,
             "message_id": post.message_id,
-
             "owner": channel["owner"],
-
             "views": views,
             "reactions": reactions,
-
             "status": "pending",
-
             "view_order": None,
             "reaction_order": None,
         }
     )
 
-    # Notify user
-    try:
+    if not created:
+        return
 
+    await update_channel(
+        post.chat.id,
+        {
+            "last_post": max(post.message_id, channel.get("last_post", 0))
+        }
+    )
+
+    # Notify user only once, after the order was actually inserted.
+    try:
         await post.bot.send_message(
             channel["owner"],
             f"""
 📝 <b>New Post Detected</b>
 <blockquote>-------------------------------------------------------
-📢 <b>Channel</b> :{channel['title']}
+📢 <b>Channel</b> :{escape(channel.get('title') or 'Unknown Channel')}
 🔗 <b>Post</b> :{post_link}
-👀 <b>Views Requested</b> :{views}
-❤️ <b>Reactions Requested</b> :{reactions}
+👀 <b>Views Requested</b> :{views:,}
+❤️ <b>Reactions Requested</b> :{reactions:,}
 -------------------------------------------------------</blockquote>
 ⏳ Status
 Waiting for worker...
@@ -604,6 +687,7 @@ Your boost request has been queued successfully.
 
     print(
         f"📝 New Post Queued | "
-        f"{channel['title']} | "
+        f"{channel.get('title') or 'Unknown Channel'} | "
         f"{post.message_id}"
     )
+
